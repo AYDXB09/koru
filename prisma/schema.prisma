@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// NOTE: JSON-shaped fields are stored as TEXT (String) for full SQLite +
+// PostgreSQL portability. Serialize with the helpers in src/lib/json.ts.
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  avatarUrl     String?
+  timezone      String   @default("Pacific/Fiji")
+  onboardedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile       Profile?
+  applications  Application[]
+  documents     Document[]
+  notifications Notification[]
+  reminders     Reminder[]
+  sessions      Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Profile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  age                Int?
+  citizenship        String   @default("Fijian")
+  city               String?
+  education          String? // Secondary | Certificate | Diploma | Bachelor's | Master's | PhD | Other
+  employmentStatus   String? // Student | Employed | Self-employed | Unemployed | Other
+  sector             String?
+  organizationType   String? // Individual | Startup | SME | NGO | Community group | Government | Academic | Other
+  businessStage      String? // Idea | Early stage | Growth | Established | N/A
+  yearsExperience    Int?
+  fundingInterests   String   @default("[]") // JSON [string]
+  languages          String   @default("[]") // JSON [string]
+  documentsAvailable String   @default("[]") // JSON [string]
+  bio                String?
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Provider {
+  id                String   @id @default(cuid())
+  organization      String
+  website           String?
+  country           String   @default("Fiji")
+  description       String?
+  verified          Boolean  @default(false)
+  logoUrl           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  opportunities     Opportunity[]
+  ingestionSourceId String?
+  ingestionSource   IngestionSource? @relation(fields: [ingestionSourceId], references: [id], onDelete: SetNull)
+}
+
+model Opportunity {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  title             String
+  providerId        String
+  category          String // startup-funding | climate-grant | research-grant | travel-grant | scholarship | fellowship | competition | business-support | community-grant | job | professional-development
+  deadline          DateTime?
+  isRolling         Boolean  @default(false)
+  countryScope      String   @default("Fiji")
+  description       String
+  officialUrl       String?
+  applicationUrl    String?
+  fundingAmount     String?
+  currency          String   @default("FJD")
+  amountLow         Float?
+  amountHigh        Float?
+  status            String   @default("draft") // draft | published | archived
+  verificationLevel String   @default("official") // official | partner | community
+  estimatedHours    Int      @default(4)
+  difficulty        String   @default("medium") // easy | medium | hard
+  ageMin            Int?
+  ageMax            Int?
+  requiredDocuments String   @default("[]") // JSON [string]
+  stages            String   @default("[]") // JSON [{ name, description, order }]
+  faq               String   @default("[]") // JSON [{ question, answer }]
+  sourceUrl         String?
+  lastVerifiedAt    DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  provider         Provider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  eligibilityRules EligibilityRule[]
+  applications     Application[]
+
+  @@index([status, category])
+}
+
+model EligibilityRule {
+  id            String @id @default(cuid())
+  opportunityId String
+  field         String // age | citizenship | city | education | sector | organizationType | businessStage | yearsExperience | fundingInterests | documentsAvailable
+  operator      String // gte | lte | eq | neq | in | not | has | hasAll
+  value         String // JSON value (number | string | string[])
+  required      Boolean @default(true)
+  label         String?
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([opportunityId])
+}
+
+model Application {
+  id            String   @id @default(cuid())
+  userId        String
+  opportunityId String
+  status        String   @default("not-started") // not-started | in-progress | ready-to-submit | submitted | accepted | rejected | withdrawn
+  completion    Int      @default(0) // 0-100, recomputed by the engine
+  notes         String?
+  startedAt     DateTime @default(now())
+  submittedAt   DateTime?
+  outcomeAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity  Opportunity   @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  tasks        Task[]
+  documents    Document[]
+  reminders    Reminder[]
+
+  @@index([userId, status])
+  @@unique([userId, opportunityId])
+}
+
+model Task {
+  id               String   @id @default(cuid())
+  applicationId    String
+  title            String
+  description      String?
+  category         String   @default("other") // document | proposal | budget | logistics | other
+  completed        Boolean  @default(false)
+  completedAt      DateTime?
+  dueDate          DateTime?
+  priority         String   @default("medium") // low | medium | high | urgent
+  sortOrder        Int      @default(0)
+  dependencies     String   @default("[]") // JSON [taskId]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, completed])
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  userId        String
+  applicationId String?
+  name          String
+  type          String   @default("other") // cv | passport | transcript | certificate | proposal | budget | business-registration | tax-certificate | bank-statement | recommendation | id | other
+  url           String?
+  fileType      String?
+  fileSize      Int?
+  verified      Boolean  @default(false)
+  isReusable    Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([applicationId])
+}
+
+model Reminder {
+  id            String    @id @default(cuid())
+  userId        String
+  applicationId String?
+  title         String
+  date          DateTime
+  type          String // deadline | task | digest
+  sent          Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sent])
+  @@index([date])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // deadline | task | application | system | ai
+  title     String
+  body      String?
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model IngestionSource {
+  id          String   @id @default(cuid())
+  name        String
+  url         String
+  sourceType  String   @default("government") // government | ngo | university | international | regional | private
+  description String?
+  cadence     String   @default("weekly") // daily | weekly | monthly
+  adapter     String   @default("sample") // sample | url
+  enabled     Boolean  @default(true)
+  selectors   String   @default("{}") // JSON config
+  lastSyncAt  DateTime?
+  syncStatus  String   @default("idle") // idle | running | success | failed
+  lastError   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  providers Provider[]
+  logs      SyncLog[]
+}
+
+model SyncLog {
+  id         String    @id @default(cuid())
+  sourceId   String
+  status     String // success | partial | failed
+  itemsFound Int       @default(0)
+  itemsAdded Int       @default(0)
+  error      String?
+  startedAt  DateTime
+  finishedAt DateTime?
+
+  source IngestionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+}
