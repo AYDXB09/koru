@@ -17,13 +17,80 @@ export async function listPublishedOpportunities() {
 
 /** Live catalogue stats for the landing page (no fabricated numbers). */
 export async function getLandingStats() {
-  const total = await prisma.opportunity.count({ where: { status: "published" } });
-  const byCategory = await prisma.opportunity.groupBy({
-    by: ["category"],
-    where: { status: "published" },
-    _count: { _all: true },
+  const [total, providers, rolling, closingSoon, byCategory] = await Promise.all([
+    prisma.opportunity.count({ where: { status: "published" } }),
+    prisma.provider.count(),
+    prisma.opportunity.count({ where: { status: "published", isRolling: true } }),
+    prisma.opportunity.count({
+      where: {
+        status: "published",
+        isRolling: false,
+        deadline: { not: null, gte: new Date(), lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+      },
+    }),
+    prisma.opportunity.groupBy({
+      by: ["category"],
+      where: { status: "published" },
+      _count: { _all: true },
+    }),
+  ]);
+  return { total, providers, rolling, closingSoon, byCategory };
+}
+
+/**
+ * The next real dated deadlines across the index, for the landing ledger.
+ * Rolling opportunities ride along at the tail so the panel reads like a
+ * mixed market board rather than a countdown list.
+ */
+export async function getLandingLedger(limit = 4) {
+  const dated = await prisma.opportunity.findMany({
+    where: { status: "published", isRolling: false, deadline: { not: null, gte: new Date() } },
+    include: { provider: { select: { organization: true, verified: true } } },
+    orderBy: { deadline: "asc" },
+    take: limit,
   });
-  return { total, byCategory };
+  const rolling = await prisma.opportunity.findMany({
+    where: { status: "published", isRolling: true },
+    include: { provider: { select: { organization: true, verified: true } } },
+    orderBy: { updatedAt: "desc" },
+    take: 2,
+  });
+  const rows = [...dated, ...rolling];
+  return rows.map((o) => {
+    const opp = serializeOpportunity(o);
+    return {
+      ...opp,
+      daysLeft: opp.deadline ? daysUntil(opp.deadline) : null,
+      providerName: o.provider.organization,
+    };
+  });
+}
+
+/** Closing-soon strip for the dashboard: upcoming deadlines not yet on the user's plan. */
+export async function getClosingSoon(userId: string, limit = 5) {
+  const taken = await prisma.application.findMany({
+    where: { userId },
+    select: { opportunityId: true },
+  });
+  const rows = await prisma.opportunity.findMany({
+    where: {
+      status: "published",
+      isRolling: false,
+      deadline: { not: null, gte: new Date() },
+      id: { notIn: taken.map((t) => t.opportunityId) },
+    },
+    include: { provider: { select: { organization: true, verified: true } } },
+    orderBy: { deadline: "asc" },
+    take: limit,
+  });
+  return rows.map((o) => {
+    const opp = serializeOpportunity(o);
+    return {
+      ...opp,
+      daysLeft: opp.deadline ? daysUntil(opp.deadline) : null,
+      providerName: o.provider.organization,
+    };
+  });
 }
 
 export async function getOpportunityBySlug(slug: string) {

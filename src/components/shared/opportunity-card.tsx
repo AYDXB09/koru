@@ -18,12 +18,15 @@ export function OpportunityCard({
   index?: string;
 }) {
   const isClosed = opportunity.deadline && daysUntil(opportunity.deadline) < 0 && !opportunity.isRolling;
+  const days = opportunity.deadline ? daysUntil(opportunity.deadline) : null;
+  const closingSoon = !isClosed && !opportunity.isRolling && days !== null && days >= 0 && days <= 14;
 
   return (
     <Link
       href={`/opportunities/${opportunity.slug}`}
-      className="group flex h-full flex-col border bg-card transition-colors hover:border-primary/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="group relative flex h-full flex-col overflow-hidden border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_18px_40px_-30px_oklch(0.24_0.035_205/0.55)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
     >
+      {closingSoon && <span aria-hidden="true" className="absolute inset-x-0 top-0 z-10 h-0.5 bg-accent" />}
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -55,12 +58,14 @@ export function OpportunityCard({
           <p className={cn("text-sm font-medium leading-none text-primary")}>
             {opportunity.fundingAmount ?? (isClosed ? "Closed" : "Funded")}
           </p>
-          <p className={cn("mt-1.5 text-xs", isClosed ? "text-destructive" : "text-muted-foreground")}>
+          <p className={cn("mt-1.5 text-xs", isClosed ? "text-destructive" : closingSoon ? "font-medium text-accent" : "text-muted-foreground")}>
             {isClosed
               ? "Deadline passed"
               : opportunity.isRolling
                 ? "Rolling · apply any time"
-                : `${deadlineLabel(opportunity.deadline)}`}
+                : closingSoon && days !== null
+                  ? `${days} ${days === 1 ? "day" : "days"} left`
+                  : `${deadlineLabel(opportunity.deadline)}`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">

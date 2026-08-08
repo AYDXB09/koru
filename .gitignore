@@ -46,4 +46,13 @@ next-env.d.ts
 /prisma/dev.db
 /dev-server.log
 
+# agent tooling
+/.agents
+/.claude
+/.windsurf
+/skills-lock.json
+
+# local UI review screenshots
+/ui-review-*.png
+
 /src/generated/prisma

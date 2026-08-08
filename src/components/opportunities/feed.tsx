@@ -18,11 +18,20 @@ import { cn } from "@/lib/utils";
 
 type SortKey = "fit" | "deadline" | "effort";
 
-export function OpportunitiesFeed({ opportunities }: { opportunities: FittedOpportunity[] }) {
+const PAGE = 24;
+
+export function OpportunitiesFeed({
+  opportunities,
+  closingWeek,
+}: {
+  opportunities: FittedOpportunity[];
+  closingWeek: number;
+}) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState<SortKey>("fit");
   const [open, setOpen] = useState(false);
+  const [visible, setVisible] = useState(PAGE);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -47,6 +56,9 @@ export function OpportunitiesFeed({ opportunities }: { opportunities: FittedOppo
     } else list.sort((a, b) => a.estimatedHours - b.estimatedHours);
     return list;
   }, [opportunities, query, category, sort]);
+
+  const showMore = () => setVisible((v) => v + PAGE);
+  const shown = filtered.slice(0, visible);
 
   return (
     <div className="space-y-6">
@@ -98,10 +110,13 @@ export function OpportunitiesFeed({ opportunities }: { opportunities: FittedOppo
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
         <p className="label-mono text-muted-foreground">
           {filtered.length} {filtered.length === 1 ? "opportunity" : "opportunities"}
           {category !== "all" ? ` in ${CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]}` : ""}
+          <span className="ml-3 hidden text-[10px] text-accent sm:inline">
+            {closingWeek} {closingWeek === 1 ? "closes" : "close"} this week
+          </span>
         </p>
         <p className="hidden text-xs text-muted-foreground sm:block">
           Sorted by{" "}
@@ -111,13 +126,13 @@ export function OpportunitiesFeed({ opportunities }: { opportunities: FittedOppo
         </p>
       </div>
 
-      {filtered.length === 0 ? (
+      {shown.length === 0 ? (
         <div className="border px-5 py-16 text-center">
           <p className="text-sm text-muted-foreground">No opportunities match your filters.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((o, i) => (
+          {shown.map((o, i) => (
             <OpportunityCard
               key={o.id}
               opportunity={o}
@@ -126,6 +141,14 @@ export function OpportunitiesFeed({ opportunities }: { opportunities: FittedOppo
               index={String(i + 1).padStart(2, "0")}
             />
           ))}
+        </div>
+      )}
+
+      {filtered.length > visible && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" onClick={showMore}>
+            Load more ({filtered.length - visible} remaining)
+          </Button>
         </div>
       )}
     </div>

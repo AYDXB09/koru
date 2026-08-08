@@ -234,6 +234,86 @@
   }
 }
 
+/* Pulsing coral "live" indicator used in the ledger and ticker. */
+@utility live-dot {
+  position: relative;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px oklch(0.72 0.15 45 / 0.18);
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 9999px;
+    border: 1px solid oklch(0.72 0.15 45 / 0.5);
+    animation: live-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+}
+
+@keyframes live-ping {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* Giant ghost numeral for index moments. Outline only, tints on hover. */
+@utility ghost-num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 0.82;
+  letter-spacing: -0.04em;
+  color: transparent;
+  -webkit-text-stroke: 1px oklch(0.24 0.035 205 / 0.28);
+  -webkit-text-fill-color: transparent;
+  user-select: none;
+}
+
+/* Tide-band: a coral-to-lagoon wash used behind the closing CTA and hero seams. */
+@utility tide-band {
+  background-image:
+    linear-gradient(
+      115deg,
+      oklch(0.72 0.15 45 / 0.09),
+      oklch(0.985 0.008 85) 38%,
+      oklch(0.5 0.095 195 / 0.09)
+    );
+}
+
+/* Editorial column rule used to split ledger rows with a coral tick. */
+@utility col-tick {
+  &::before {
+    content: "";
+    display: inline-block;
+    width: 0.35rem;
+    height: 1px;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+    background: var(--accent);
+  }
+}
+
+/* Respect users who prefer less motion: halt marquees, pings and reveals. */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .live-dot::after,
+  .fade-up {
+    animation: none !important;
+  }
+  .fade-up {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* Keyboard focus must be visible everywhere, not just on form controls. */
 a,
 button,

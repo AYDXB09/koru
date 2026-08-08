@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Compass, ClipboardList, CalendarClock, Hourglass, Archive, ArrowRight } from "lucide-react";
 import { requireUser } from "@/lib/auth";
-import { getDashboardData, getOpportunityFits, getUserDocuments, profileForEngine } from "@/server/queries";
+import { getDashboardData, getOpportunityFits, getUserDocuments, profileForEngine, getClosingSoon } from "@/server/queries";
 import { Button } from "@/components/ui/button";
 import { ScoreRing } from "@/components/shared/score";
 import { OpportunityCard } from "@/components/shared/opportunity-card";
@@ -23,7 +23,11 @@ function fijiDateString() {
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const [data, fits] = await Promise.all([getDashboardData(user.id), getOpportunityFits(user.id)]);
+  const [data, fits, closingSoon] = await Promise.all([
+    getDashboardData(user.id),
+    getOpportunityFits(user.id),
+    getClosingSoon(user.id, 6),
+  ]);
   const profile = await profileForEngine(user.id);
 
   const profileComplete = Boolean(
@@ -77,6 +81,43 @@ export default async function DashboardPage() {
         <StatCell index="03" icon={<Hourglass className="h-[18px] w-[18px]" />} label="Hours of work planned" value={hoursSaved} />
         <StatCell index="04" icon={<Archive className="h-[18px] w-[18px]" />} label="Reusable documents" value={reusableDocs} />
       </dl>
+
+      {/* Closing soon across the index */}
+      {closingSoon.length > 0 && (
+        <section className="mt-8 border">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-card px-4 py-2.5">
+            <p className="label-mono flex items-center gap-2 text-muted-foreground">
+              <span className="live-dot" aria-hidden="true" /> Closing soon across the index
+            </p>
+            <Link href="/opportunities" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              Browse <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="ledger-rule">
+            {closingSoon.map((o, i) => (
+              <Link
+                key={o.id}
+                href={`/opportunities/${o.slug}`}
+                className="group flex items-center gap-4 border-b px-4 py-3 transition-colors last:border-b-0 hover:bg-muted/60"
+              >
+                <span className="tabular w-6 shrink-0 font-mono text-[11px] text-muted-foreground">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium group-hover:text-primary">{o.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">{o.providerName}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xs font-medium text-primary">{o.fundingAmount || "Open"}</p>
+                  <p className={`mt-0.5 text-[11px] ${o.daysLeft !== null && o.daysLeft <= 7 ? "font-medium text-accent" : "text-muted-foreground"}`}>
+                    {o.daysLeft !== null ? `${o.daysLeft} ${o.daysLeft === 1 ? "day" : "days"} left` : "open"}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-10 grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">
