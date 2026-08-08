@@ -5,7 +5,6 @@ import { optionalUser } from "@/lib/auth";
 import { getLandingStats, getLandingLedger } from "@/server/queries";
 import { KoruMark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { CountUp } from "@/components/shared/count-up";
 import { Reveal } from "@/components/shared/reveal";
 import { CATEGORY_LABELS } from "@/lib/types";
@@ -55,7 +54,6 @@ export default async function LandingPage() {
             <span className="font-display text-lg font-medium tracking-tight">Koru</span>
           </Link>
           <div className="flex items-center gap-1.5">
-            <ThemeToggle />
             <Button asChild>
               <Link href="/login">Get started</Link>
             </Button>

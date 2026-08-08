@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { optionalUser } from "@/lib/auth";
 import { Brand, KoruMark } from "@/components/brand";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata = { title: "Sign in · Koru" };
@@ -38,7 +37,6 @@ export default async function LoginPage() {
           <span className="lg:hidden">
             <Brand />
           </span>
-          <ThemeToggle />
         </header>
         <div className="flex flex-1 items-center justify-center px-6 pb-16 pt-6">
           <LoginForm />

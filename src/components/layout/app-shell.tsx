@@ -17,7 +17,6 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { logout } from "@/server/actions/auth";
 
 type NavItem = {
@@ -159,7 +158,6 @@ export function AppShellClient({
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex-1" />
-          <ThemeToggle />
           <Link
             href="/notifications"
             aria-label="Notifications"
