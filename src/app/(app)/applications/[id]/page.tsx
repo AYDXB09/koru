@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getApplicationDetail, getUserDocuments } from "@/server/queries";
 import { requireUser } from "@/lib/auth";
 import { evaluateEligibility } from "@/lib/eligibility";
-import { profileLike } from "@/server/serializers";
+import { profileLike, profileFacts } from "@/server/serializers";
 import { ApplicationWorkspace } from "@/components/application/workspace";
 import { prisma } from "@/lib/db";
 
@@ -48,6 +48,7 @@ export default async function ApplicationPage({
           category: application.opportunity.category,
           estimatedHours: application.opportunity.estimatedHours,
           stages: application.opportunity.stages,
+          requiredDocuments: application.opportunity.requiredDocuments,
         },
         rules: application.rules,
         tasks: application.tasks,
@@ -60,6 +61,9 @@ export default async function ApplicationPage({
         url: d.url,
       }))}
       eligibility={eligibility}
+      requiredDocuments={application.opportunity.requiredDocuments}
+      applicationUrl={application.opportunity.applicationUrl}
+      profile={profile ? profileFacts(user.name, profile) : null}
     />
   );
 }

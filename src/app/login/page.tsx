@@ -27,7 +27,6 @@ export default async function LoginPage() {
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <KoruMark className="h-6 w-6 text-primary" />
-          <span>Made in Suva · 2026</span>
         </div>
       </aside>
 

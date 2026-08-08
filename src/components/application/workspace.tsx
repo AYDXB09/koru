@@ -43,9 +43,12 @@ import {
 import { ScoreRing } from "@/components/shared/score";
 import { DeadlineBar } from "@/components/shared/deadline-bar";
 import { EligibilityPanel } from "@/components/opportunities/eligibility-panel";
+import { ApplicationFormTab } from "@/components/application/application-form";
+import { RichText } from "@/components/application/rich-text";
 import { DOCUMENT_TYPES, DOCUMENT_LABELS, TASK_CATEGORY_LABELS, APPLICATION_STATUS_LABELS } from "@/lib/constants";
 import { deadlineLabel } from "@/lib/deadlines";
 import type { EligibilityResult, TaskDto, DocumentDto } from "@/lib/types";
+import type { ProfileFacts } from "@/lib/smartfill";
 import {
   addTask,
   deleteApplication,
@@ -70,6 +73,7 @@ interface WorkspaceOpportunity {
   category: string;
   estimatedHours: number;
   stages: { name: string; description: string; order: number }[];
+  requiredDocuments: string[];
 }
 
 interface WorkspaceApp {
@@ -87,28 +91,20 @@ interface WorkspaceApp {
 
 type VaultDoc = { id: string; name: string; type: string; url: string | null };
 
-function RichText({ text }: { text: string }) {
-  return (
-    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-      {text.split("\n").map((line, i) => (
-        <p key={i} className="min-h-[1.25rem]">
-          {line.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
-            part.startsWith("**") && part.endsWith("**") ? <strong key={j}>{part.slice(2, -2)}</strong> : part,
-          )}
-        </p>
-      ))}
-    </div>
-  );
-}
-
 export function ApplicationWorkspace({
   application,
   vaultDocuments,
   eligibility,
+  requiredDocuments,
+  applicationUrl,
+  profile,
 }: {
   application: WorkspaceApp;
   vaultDocuments: VaultDoc[];
   eligibility: EligibilityResult;
+  requiredDocuments: string[];
+  applicationUrl: string | null;
+  profile: ProfileFacts | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -243,6 +239,7 @@ export function ApplicationWorkspace({
             <TabsTrigger value="eligibility">Eligibility</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="assistant">Assistant</TabsTrigger>
+            <TabsTrigger value="form">Application form</TabsTrigger>
           </TabsList>
 
           {/* CHECKLIST */}
@@ -477,6 +474,17 @@ export function ApplicationWorkspace({
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* APPLICATION FORM */}
+          <TabsContent value="form" className="mt-4">
+            <ApplicationFormTab
+              applicationId={application.id}
+              requiredDocuments={requiredDocuments}
+              applicationUrl={applicationUrl}
+              profile={profile}
+              onGoToDocuments={() => setTab("documents")}
+            />
           </TabsContent>
         </Tabs>
       </div>

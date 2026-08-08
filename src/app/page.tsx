@@ -68,9 +68,6 @@ export default async function LandingPage() {
             <p className="label-mono text-muted-foreground">
               {day} · {dateStr}
             </p>
-            <p className="label-mono flex items-center gap-2 text-muted-foreground">
-              <span className="live-dot" aria-hidden="true" /> the index updates on its own
-            </p>
             <p className="label-mono text-primary">Nº <CountUp value={stats.total} /></p>
           </div>
         </div>
@@ -97,7 +94,6 @@ export default async function LandingPage() {
                   Find your funding <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
-              <p className="text-sm text-muted-foreground">Free for Fijians. No card.</p>
             </div>
 
             <dl className="mt-12 grid grid-cols-2 gap-x-6 gap-y-8 border-t pt-6 sm:grid-cols-4">
@@ -375,7 +371,6 @@ export default async function LandingPage() {
             <KoruMark className="h-6 w-6 text-primary" />
             <span>Koru · The Funding OS for Fiji</span>
           </div>
-          <p className="label-mono">Made in Suva · 2026</p>
         </div>
       </footer>
     </div>

@@ -9,7 +9,10 @@ import { buildTaskPlan } from "@/lib/plan";
 import { jparse } from "@/lib/json";
 import { reminderSchedule } from "@/lib/deadlines";
 import { getOpportunityRules } from "@/server/queries";
-import { profileLike } from "@/server/serializers";
+import { profileLike, profileFacts } from "@/server/serializers";
+import { buildPersonalStatement } from "@/lib/smartfill";
+import type { ProfileFacts } from "@/lib/smartfill";
+import * as ai from "@/lib/ai";
 
 const statusSchema = z.enum(["not-started", "in-progress", "ready-to-submit", "submitted", "accepted", "rejected", "withdrawn"]);
 
@@ -303,4 +306,127 @@ export async function getEligibilityViewForApplication(applicationId: string) {
   const rules = await getOpportunityRules(app.opportunityId);
   const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
   return { rules, profile: profile ? profileLike(profile) : null };
+}
+
+// ---------------------------------------------------------------------------
+// Application form ("fill out and finish")
+// ---------------------------------------------------------------------------
+
+const formAnswersSchema = z.record(z.string(), z.string().max(4000));
+
+export interface SaveFormResult {
+  ok: boolean;
+  error?: string;
+}
+
+/** Persist the guided form answers for an application. */
+export async function saveApplicationForm(
+  applicationId: string,
+  answers: Record<string, string>,
+): Promise<SaveFormResult> {
+  const user = await requireUser();
+  const app = await prisma.application.findFirst({ where: { id: applicationId, userId: user.id } });
+  if (!app) return { ok: false, error: "Application not found." };
+
+  const parsed = formAnswersSchema.safeParse(answers);
+  if (!parsed.success) return { ok: false, error: "One or more answers are too long." };
+
+  try {
+    await prisma.application.update({
+      where: { id: applicationId },
+      data: { formAnswers: JSON.stringify(parsed.data) },
+    });
+    await recomputeCompletion(applicationId);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not save the form." };
+  }
+
+  revalidatePath(`/applications/${applicationId}`);
+  return { ok: true };
+}
+
+export interface ApplicationFormData {
+  answers: Record<string, string>;
+  profile: ProfileFacts | null;
+  opportunity: {
+    title: string;
+    description: string;
+    providerName: string;
+    applicationUrl: string | null;
+    requiredDocuments: string[];
+    stages: { name: string; description: string; order: number }[];
+  };
+}
+
+/** Load the form answers plus the grounded profile and opportunity data. */
+export async function getApplicationForm(applicationId: string): Promise<ApplicationFormData> {
+  const user = await requireUser();
+  const app = await prisma.application.findFirst({
+    where: { id: applicationId, userId: user.id },
+    include: { opportunity: { include: { provider: { select: { organization: true } } } } },
+  });
+  if (!app) throw new Error("Application not found.");
+
+  const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+
+  return {
+    answers: jparse<Record<string, string>>(app.formAnswers, {}),
+    profile: profile ? profileFacts(user.name, profile) : null,
+    opportunity: {
+      title: app.opportunity.title,
+      description: app.opportunity.description,
+      providerName: app.opportunity.provider.organization,
+      applicationUrl: app.opportunity.applicationUrl,
+      requiredDocuments: jparse<string[]>(app.opportunity.requiredDocuments, []),
+      stages: jparse(app.opportunity.stages, []),
+    },
+  };
+}
+
+export interface DraftResult {
+  ok: boolean;
+  text?: string;
+  error?: string;
+}
+
+/** Draft a grounded answer for a form field from the user's own data. */
+export async function draftApplicationForm(
+  applicationId: string,
+  field: "proposal" | "personalStatement",
+): Promise<DraftResult> {
+  const user = await requireUser();
+  const app = await prisma.application.findFirst({
+    where: { id: applicationId, userId: user.id },
+    include: { opportunity: true },
+  });
+  if (!app) return { ok: false, error: "Application not found." };
+
+  try {
+    const profile = await prisma.profile.findUnique({ where: { userId: user.id } });
+
+    if (field === "proposal") {
+      const description =
+        app.notes?.trim() || profile?.bio?.trim() || app.opportunity.description;
+      const text = await ai.suggestOutline({ title: app.opportunity.title, description });
+      return { ok: true, text };
+    }
+
+    if (!profile) {
+      return {
+        ok: true,
+        text: "Complete your profile first so Koru can draft a personal statement grounded in your details.",
+      };
+    }
+
+    const text = buildPersonalStatement(profileFacts(user.name, profile));
+    if (!text.trim()) {
+      return {
+        ok: true,
+        text: "Add a few details to your profile so Koru can draft a personal statement from your facts.",
+      };
+    }
+    return { ok: true, text };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not draft the answer." };
+  }
 }

@@ -135,6 +135,7 @@ model Application {
   status        String   @default("not-started") // not-started | in-progress | ready-to-submit | submitted | accepted | rejected | withdrawn
   completion    Int      @default(0) // 0-100, recomputed by the engine
   notes         String?
+  formAnswers   String   @default("{}") // JSON Record<string, string>
   startedAt     DateTime @default(now())
   submittedAt   DateTime?
   outcomeAt     DateTime?

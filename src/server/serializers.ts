@@ -7,7 +7,8 @@ import type {
   DocumentDto,
 } from "@/lib/types";
 import { jparse } from "@/lib/json";
-import type { Opportunity, EligibilityRule, Task, Document } from "@/generated/prisma/client";
+import type { ProfileFacts } from "@/lib/smartfill";
+import type { Opportunity, EligibilityRule, Task, Document, Profile } from "@/generated/prisma/client";
 
 export function serializeOpportunity(opp: Opportunity & { provider: { organization: string; verified: boolean } }): OpportunityDto {
   return {
@@ -79,6 +80,21 @@ export function serializeDocument(doc: Document): DocumentDto {
     isReusable: doc.isReusable,
     applicationId: doc.applicationId,
     createdAt: doc.createdAt,
+  };
+}
+
+/** Full profile → ProfileFacts shape for the application form. */
+export function profileFacts(name: string, profile: Profile): ProfileFacts {
+  return {
+    name,
+    age: profile.age,
+    city: profile.city,
+    education: profile.education,
+    employmentStatus: profile.employmentStatus,
+    sector: profile.sector,
+    languages: jparse<string[]>(profile.languages, []),
+    fundingInterests: jparse<string[]>(profile.fundingInterests, []),
+    bio: profile.bio,
   };
 }
 

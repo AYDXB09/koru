@@ -78,7 +78,16 @@ export function OnboardingWizard({ name }: { name: string }) {
     step === 0 ? form.name.trim().length > 0 : step === 1 ? form.interests.length > 0 : true;
 
   return (
-    <form action={formAction} className="w-full max-w-3xl">
+    <form
+      action={formAction}
+      onSubmit={(e) => {
+        if (step < 2) {
+          e.preventDefault();
+          if (canContinue) setStep((s) => s + 1);
+        }
+      }}
+      className="w-full max-w-3xl"
+    >
       <div className="grid gap-10 md:grid-cols-[200px_1fr]">
         {/* Step rail */}
         <div className="hidden md:block">
