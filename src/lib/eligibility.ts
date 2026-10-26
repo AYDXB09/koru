@@ -24,6 +24,15 @@ const EDUCATION_ORDINAL: Record<string, number> = {
   Other: 0,
 };
 
+/**
+ * Comparison key for free-text values. Profile fields such as citizenship are
+ * typed by the user, so "fijian" and "Fijian " must match a rule written as
+ * "Fijian". Applied to both sides of every text comparison.
+ */
+function norm(value: unknown): string {
+  return String(value).trim().toLowerCase();
+}
+
 function readField(profile: ProfileLike, field: EligibilityField): unknown {
   switch (field) {
     case "age":
@@ -125,7 +134,10 @@ export function evaluateRule(
     label: rule.label,
   };
 
-  const missing = actual === null || actual === undefined || actual === "";
+  const missing =
+    actual === null ||
+    actual === undefined ||
+    (typeof actual === "string" && actual.trim() === "");
 
   const describe = (satisfied: boolean, detail: string): RuleResult => ({
     ...base,
@@ -162,31 +174,34 @@ export function evaluateRule(
     }
     case "eq": {
       if (missing) return describe(false, `${fieldLabel(rule.field)} is not set on your profile.`);
-      const ok = String(actual) === String(expected);
+      const ok = norm(actual) === norm(expected);
       return describe(ok, `${displayValue(actual)} (required: ${displayValue(expected)})`);
     }
     case "neq": {
       if (missing) return describe(false, `${fieldLabel(rule.field)} is not set on your profile.`);
-      const ok = String(actual) !== String(expected);
+      const ok = norm(actual) !== norm(expected);
       return describe(ok, `${displayValue(actual)} (must not be ${displayValue(expected)})`);
     }
     case "in": {
       const options = Array.isArray(expected) ? expected : [expected];
       if (missing) return describe(false, `${fieldLabel(rule.field)} is not set on your profile.`);
-      const ok = options.some((opt) => String(actual).toLowerCase() === String(opt).toLowerCase());
+      const ok = options.some((opt) => norm(actual) === norm(opt));
       return describe(ok, `${displayValue(actual)} (required one of: ${displayValue(options)})`);
     }
     case "not": {
       const options = Array.isArray(expected) ? expected : [expected];
       if (missing) return describe(false, `${fieldLabel(rule.field)} is not set on your profile.`);
-      const ok = !options.some((opt) => String(actual).toLowerCase() === String(opt).toLowerCase());
+      const ok = !options.some((opt) => norm(actual) === norm(opt));
       return describe(ok, `${displayValue(actual)} (must not be one of: ${displayValue(options)})`);
     }
     case "has": {
       const list = toList(actual);
-      const required = (Array.isArray(expected) ? expected : [expected]).map(String);
+      // An empty keyword would match every item, so it is dropped.
+      const required = (Array.isArray(expected) ? expected : [expected])
+        .map(String)
+        .filter((req) => norm(req) !== "");
       const matched = list.filter((item) =>
-        required.some((req) => String(item).toLowerCase().includes(req.toLowerCase())),
+        required.some((req) => norm(item).includes(norm(req))),
       );
       if (list.length === 0) {
         return describe(false, `Your ${fieldLabel(rule.field).toLowerCase()} is not set on your profile.`);
@@ -203,7 +218,7 @@ export function evaluateRule(
       const list = toList(actual);
       const required = (Array.isArray(expected) ? expected : [expected]).map(String);
       const missingItems = required.filter(
-        (req) => !list.some((item) => String(item).toLowerCase() === String(req).toLowerCase()),
+        (req) => !list.some((item) => norm(item) === norm(req)),
       );
       if (missingItems.length === 0) {
         return describe(true, `All required items available: ${required.join(", ")}`);
