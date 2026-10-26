@@ -16,7 +16,7 @@ Koru walks a user through five movements.
 
 **Find.** A curated catalogue plus an auto-syncing intake layer keeps the list current. Ingestion runs on a cadence (weekly for some sources, monthly for others) each time a user visits the app, and deduplicates by normalized title and provider so the same grant never appears twice under two names.
 
-**Match.** The eligibility engine encodes real rules: age, citizenship, education, sector, organization type, business stage, years of experience, funding interests, which documents the user holds. For each opportunity it returns a per-rule yes or no and an overall fit score. The Pacific specifics are engineered in rather than bolted on: Manaaki New Zealand Scholarships are postgraduate-only for Fijians, and the engine says so instead of quietly listing them for undergrads.
+**Match.** The eligibility engine encodes real rules: age, citizenship, education, sector, organization type, business stage, years of experience, funding interests, which documents the user holds. For each opportunity it returns a per-rule yes or no and an overall fit score. The Pacific specifics are encoded as explicit rules rather than bolted on: the Manaaki New Zealand Scholarship entry, for example, requires Fijian citizenship, an age of 18 to 40 and a Diploma or higher, and the engine shows each of those as its own yes or no.
 
 **Plan.** Matching your three strongest opportunities auto-opens applications during onboarding, and each application gets a generated task plan that orders the work: which document first, which deadline gates which step. Reminders fire at 14, 7, 3, and 1 days out.
 
@@ -36,7 +36,7 @@ The gaps, named:
 - No application walkthrough. Ready Set College holds US students by the hand through college applications; the equivalent for an Australia Awards submission does not exist.
 - No low-data, mobile-first design. Outer-island users on intermittent connections need pages that weigh little and forms that survive a dropped connection.
 
-Two small facts keep the design honest. The Pacific Resilience Facility exists so Pacific countries can draw climate finance directly, without going through a development bank in Sydney or Manila. And the postgraduate-only Manaaki rule shows that eligibility here is specific, not a checkbox a generic engine would get right by accident.
+Two small facts keep the design honest. The Pacific Resilience Facility exists so Pacific countries can draw climate finance directly, without going through a development bank in Sydney or Manila. And a rule like the Manaaki one (citizenship, an age band and a minimum education level, each checked separately) shows that eligibility here is specific, not a checkbox a generic engine would get right by accident.
 
 ## The catalogue
 
@@ -48,7 +48,7 @@ Trust gets handled by verification levels. Each listing is marked official, part
 
 ## How it works, technically
 
-Next.js App Router with server actions on the front, Prisma 7 over better-sqlite3 on the back (JSON stored as TEXT for portability), Tailwind v4 utilities and shadcn/ui components for the interface. Sixty Vitest unit tests cover eligibility, matching, plan generation, deadline scheduling, and JSON handling. The build produces 13 routes and passes clean. Email goes through Resend when an API key exists and drops to the console log otherwise. Documents go to Supabase when configured and to local disk otherwise. Task generation uses OpenAI when configured and a rule-based planner when not. Every integration degrades to a local mode, which is how the product stays runnable on a laptop with no keys at all.
+Next.js App Router with server actions on the front, Prisma 7 over better-sqlite3 on the back (JSON stored as TEXT for portability), Tailwind v4 utilities and shadcn/ui components for the interface. Eighty-eight Vitest unit tests cover eligibility, matching, plan generation, deadline scheduling, and JSON handling. The build produces 13 routes and passes clean. Email goes through Resend when an API key exists and drops to the console log otherwise. Documents go to Supabase when configured and to local disk otherwise. Task generation uses OpenAI when configured and a rule-based planner when not. Every integration degrades to a local mode, which is how the product stays runnable on a laptop with no keys at all.
 
 ## The design system
 
@@ -56,7 +56,7 @@ Next.js App Router with server actions on the front, Prisma 7 over better-sqlite
 
 ## Built today, planned next
 
-Working today: the full find-to-submit loop, passwordless email login (an email upserts a user and sets a 30-day HttpOnly session cookie, with a demo account at `demo@koru.fj`), the three-step onboarding wizard, auto-opening of top matches, reminders at 14/7/3/1 days, the document vault, and 60 passing tests.
+Working today: the full find-to-submit loop, passwordless email login (an email upserts a user and sets a 30-day HttpOnly session cookie, with a demo account at `demo@koru.fj`), the three-step onboarding wizard, auto-opening of top matches, reminders at 14/7/3/1 days, the document vault, and 88 passing tests.
 
 Ideas, labelled as such:
 
